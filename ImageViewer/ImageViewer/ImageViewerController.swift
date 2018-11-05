@@ -36,6 +36,10 @@ class ImageViewerController: UIViewController {
 
     private var currentPageIndex: Int?
 
+    private var verticalPanGesture: UIPanGestureRecognizer!
+
+    private var interactiveTransitionController: ImageViewerInteractiveTransitionController?
+
     static func viewController() -> ImageViewerController {
         let viewController = ImageViewerController()
         viewController.modalPresentationStyle = .custom
@@ -61,6 +65,7 @@ class ImageViewerController: UIViewController {
         reload()
 
         addTapDismissGestureRecognizer()
+        addSwipeDownDisimssGestureRecognizer()
     }
 
     func reload() {
@@ -91,8 +96,55 @@ class ImageViewerController: UIViewController {
         view.addGestureRecognizer(tapGesture)
     }
 
+    private func addSwipeDownDisimssGestureRecognizer() {
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanOnView(_:)))
+        panGesture.maximumNumberOfTouches = 1
+        view.addGestureRecognizer(panGesture)
+        self.verticalPanGesture = panGesture
+    }
+
     @objc private func handleTapOnView(_ sender: UITapGestureRecognizer) {
         dismiss(animated: true, completion: nil)
+    }
+
+    @objc private func handlePanOnView(_ sender: UIPanGestureRecognizer) {
+        guard sender == verticalPanGesture else {
+            return
+        }
+
+        let threshold: CGFloat = 0.4
+
+        switch verticalPanGesture.state {
+        case .began:
+            let controller = ImageViewerInteractiveTransitionController()
+            controller.wantsInteractiveStart = true
+            interactiveTransitionController = controller
+            verticalPanGesture.setTranslation(.zero, in: view)
+            dismiss(animated: true, completion: nil)
+        case .changed:
+            let currentPoint = verticalPanGesture.translation(in: view)
+            if currentPoint.y < 0 {
+                verticalPanGesture.setTranslation(.zero, in: view)
+                return
+            }
+            let progress = (currentPoint.y / (view.bounds.height / 2))
+            interactiveTransitionController?.update(progress)
+        case .ended:
+            guard let controller = interactiveTransitionController else {
+                return
+            }
+            if controller.percentComplete >= threshold {
+                controller.finish()
+            } else {
+                controller.cancel()
+            }
+            interactiveTransitionController = nil
+        case .failed, .cancelled:
+            interactiveTransitionController?.cancel()
+            interactiveTransitionController = nil
+        default:
+            interactiveTransitionController = nil
+        }
     }
 }
 
@@ -167,7 +219,7 @@ extension ImageViewerController: UIViewControllerTransitioningDelegate {
         return animator
     }
 
-//    func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
-//        <#code#>
-//    }
+    func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+        return interactiveTransitionController
+    }
 }

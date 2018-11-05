@@ -121,6 +121,7 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
         UIView.animate(withDuration: duration, animations: {
             snapshot.transform = scaleTransform.concatenating(translationTransfrom)
         }, completion: { _ in
+            fromView.isHidden = false
             snapshot.removeFromSuperview()
             complete()
         })
