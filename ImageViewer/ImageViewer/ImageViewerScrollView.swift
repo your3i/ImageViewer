@@ -32,6 +32,8 @@ class ImageViewerScrollView: UIScrollView {
 
     private func commonInit() {
         addSubview(imageView)
+        showsVerticalScrollIndicator = false
+        showsHorizontalScrollIndicator = false
         delegate = self
     }
 

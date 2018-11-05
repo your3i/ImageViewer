@@ -78,6 +78,7 @@
 				8B1035B0CDA97DC7EAA88FBF /* Frameworks */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 0;
 		};
 		C0FB97A4218EA8D8000AD027 /* Products */ = {
 			isa = PBXGroup;
