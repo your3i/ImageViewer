@@ -160,9 +160,14 @@ extension ImageViewerController: UIViewControllerTransitioningDelegate {
     func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         let animator = ImageViewerTransitionAnimator.instanceForDismiss()
         if let currentPageIndex = currentPageIndex, let destinationView = delegate?.imageViewerController(self, transitionViewForItemAt: currentPageIndex) {
+            itemViewControllers[currentPageIndex].resetZoomScale()
             animator.sourceView = itemViewControllers[currentPageIndex].imageView
             animator.destinationView = destinationView
         }
         return animator
     }
+
+//    func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+//        <#code#>
+//    }
 }

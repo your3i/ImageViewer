@@ -51,6 +51,10 @@ class ImageViewerScrollView: UIScrollView {
         updateInsets()
     }
 
+    func resetZoomScale() {
+        setZoomScale(minimumZoomScale, animated: true)
+    }
+
     private func updateInsets() {
         let horizontalInset = max(0, (bounds.width - imageView.frame.width) / 2)
         let verticalInset = max(0, (bounds.height - imageView.frame.height) / 2)

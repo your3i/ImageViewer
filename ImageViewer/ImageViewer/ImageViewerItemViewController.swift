@@ -79,4 +79,8 @@ class ImageViewerItemViewController: UIViewController {
             self?.originalLoaded = true
         }
     }
+
+    func resetZoomScale() {
+        imageZoomingView.resetZoomScale()
+    }
 }
