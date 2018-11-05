@@ -17,7 +17,7 @@ protocol ImageViewerControllerDataSource: class {
 
 protocol ImageViewerDelegate: class {
 
-    func imageViewerController(_ imageViewerController: ImageViewerController, transitionViewForItemAt index: Int) -> UIView?
+    func imageViewerController(_ imageViewerController: ImageViewerController, transitionViewForItemAt index: Int) -> UIView
 }
 
 class ImageViewerController: UIViewController {

@@ -67,10 +67,10 @@ extension ViewController: ImageViewerControllerDataSource {
 
 extension ViewController: ImageViewerDelegate {
 
-    func imageViewerController(_ imageViewerController: ImageViewerController, transitionViewForItemAt index: Int) -> UIView? {
-        let views = [imageView1, imageView2, imageView3]
+    func imageViewerController(_ imageViewerController: ImageViewerController, transitionViewForItemAt index: Int) -> UIView {
+        let views: [UIImageView] = [imageView1, imageView2, imageView3]
         guard 0..<views.count ~= index else {
-            return nil
+            return view
         }
         return views[index]
     }
