@@ -14,6 +14,8 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
 
     var destinationView: UIView?
 
+    var interactiveController: ImageViewerInteractiveTransitionController?
+
     private var isPresenting: Bool = true
 
     private override init() { }
@@ -125,5 +127,9 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
             snapshot.removeFromSuperview()
             complete()
         })
+    }
+
+    func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
+        return interactiveController!.transitionDriver!.transitionAnimator
     }
 }
