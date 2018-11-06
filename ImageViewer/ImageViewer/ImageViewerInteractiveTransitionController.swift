@@ -12,30 +12,39 @@ class ImageViewerInteractiveTransitionController: NSObject {
 
     var initiallyInteractive: Bool = false
 
-    private var animator: ImageViewerTransitionAnimator!
+    var isPresenting: Bool = true
 
-    private let panGestureRecognizer: UIPanGestureRecognizer
+    var sourceView: UIView?
 
-    private(set) var transitionDriver: ImageViewerTransitionDriver?
+    var targetView: UIView?
 
-    init(_ panGestureRecognizer: UIPanGestureRecognizer) {
-        self.panGestureRecognizer = panGestureRecognizer
+    var panGestureRecognizer: UIPanGestureRecognizer?
+
+    private(set) var interactiveTransitionDriver: ImageViewerTransitionDriver?
+}
+
+extension ImageViewerInteractiveTransitionController: UIViewControllerAnimatedTransitioning {
+
+    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
+        return ImageViewerTransitionDriver.transitionDuration(using: nil)
     }
 
-    func setAnimator(_ animator: ImageViewerTransitionAnimator) {
-        self.animator = animator
+    func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+        let driver = ImageViewerTransitionDriver(transitionContext, isPresenting: isPresenting)
+        driver.sourceView = sourceView
+        driver.targetView = targetView
+        driver.animate()
     }
 
-    func tearDown() {
-        initiallyInteractive = false
-        transitionDriver = nil
+    func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
+        return interactiveTransitionDriver!.transitionAnimator
     }
 }
 
 extension ImageViewerInteractiveTransitionController: UIViewControllerInteractiveTransitioning {
 
     func startInteractiveTransition(_ transitionContext: UIViewControllerContextTransitioning) {
-        transitionDriver = ImageViewerTransitionDriver(transitionContext, animator: animator, panGestureRecognizer: panGestureRecognizer)
+        interactiveTransitionDriver = ImageViewerTransitionDriver(transitionContext, isPresenting: isPresenting, panGestureRecognizer: panGestureRecognizer!)
     }
 
     var wantsInteractiveStart: Bool {

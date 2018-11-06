@@ -10,48 +10,28 @@ import UIKit
 
 class ImageViewerTransitionDriver: NSObject {
 
+    var sourceView: UIView?
+
+    var targetView: UIView?
+
     private let transitionContext: UIViewControllerContextTransitioning
 
-    private let panGestureRecognier: UIPanGestureRecognizer
+    private let isPresenting: Bool
 
-    private let animator: ImageViewerTransitionAnimator
+    private var panGestureRecognizer: UIPanGestureRecognizer?
 
     private(set) var transitionAnimator: UIViewPropertyAnimator!
 
-    private var itemFrameAnimator: UIViewPropertyAnimator?
+    private var middleViewAnimator: UIViewPropertyAnimator!
 
-    var transitionView: UIView? {
-        guard
-            let fromView = transitionContext.view(forKey: .from),
-            let transitionView = animator.sourceView ?? transitionContext.view(forKey: .from),
-            let snapshotFrame = transitionView.superview?.convert(transitionView.frame, to: fromView),
-            let snapshot = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: true, withCapInsets: .zero) else {
-                return nil
-        }
-        snapshot.frame = snapshotFrame
-        return snapshot
-    }
+    private var middleView: UIView!
 
-    var startTransform: CGAffineTransform {
-        return .identity
-    }
+    private var startLocation: CGPoint?
 
-    var targetTransform: CGAffineTransform {
-        guard let transitionView = transitionView, let toView = animator.destinationView ?? transitionContext.view(forKey: .to) else {
-            return .identity
-        }
+    private var currentLocation: CGPoint?
 
-        let scaleTransform = CGAffineTransform(scaleX: toView.bounds.width / transitionView.bounds.width, y: toView.bounds.height / transitionView.bounds.height)
-
-        var translationTransfrom = CGAffineTransform(translationX: 0.0, y: 0.0)
-        if let toCenter = toView.superview?.convert(toView.center, to: transitionContext.containerView) {
-            translationTransfrom = CGAffineTransform(translationX: toCenter.x - transitionView.center.x, y: toCenter.y - transitionView.center.y)
-        }
-        return scaleTransform.concatenating(translationTransfrom)
-    }
-
-    static func animationDuration() -> TimeInterval {
-        return propertyAnimator().duration
+    private var containerView: UIView {
+        return transitionContext.containerView
     }
 
     static func propertyAnimator(initialVelocity: CGVector = .zero) -> UIViewPropertyAnimator {
@@ -60,41 +40,129 @@ class ImageViewerTransitionDriver: NSObject {
         return UIViewPropertyAnimator(duration: 0.0, timingParameters: timingPramaters)
     }
 
-    init(_ transitionContext: UIViewControllerContextTransitioning, animator: ImageViewerTransitionAnimator, panGestureRecognizer: UIPanGestureRecognizer) {
+    static func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
+        return ImageViewerTransitionAnimator.animationDuration()
+    }
+
+    init(_ transitionContext: UIViewControllerContextTransitioning, isPresenting: Bool) {
         self.transitionContext = transitionContext
-        self.panGestureRecognier = panGestureRecognizer
-        self.animator = animator
+        self.isPresenting = isPresenting
         super.init()
-
-        self.panGestureRecognier.addTarget(self, action: #selector(updateInteraction(_:)))
-        setupTransitionAnimator({
-
-        }, transitionCompletion: { _ in
-
-        })
+        initMiddleView()
+        initMiddleViewAnimator()
+        initTransitionAnimator()
     }
 
-    private func setupTransitionAnimator(_ transitionAnimations: @escaping ()->(), transitionCompletion: @escaping (UIViewAnimatingPosition)->()) {
-        let transitionDuration = ImageViewerTransitionDriver.animationDuration()
-        transitionAnimator = UIViewPropertyAnimator(duration: transitionDuration, curve: UIView.AnimationCurve.easeOut, animations: transitionAnimations)
-        transitionAnimator.addCompletion { [weak self] position in
-            transitionCompletion(position)
-            let completed = (position == .end)
-            self?.transitionContext.completeTransition(completed)
+    init(_ transitionContext: UIViewControllerContextTransitioning, isPresenting: Bool, panGestureRecognizer: UIPanGestureRecognizer) {
+        self.panGestureRecognizer = panGestureRecognizer
+        self.transitionContext = transitionContext
+        self.isPresenting = isPresenting
+        super.init()
+        initMiddleView()
+        initMiddleViewAnimator()
+        initTransitionAnimator()
+        self.panGestureRecognizer?.addTarget(self, action: #selector(updateInteraction(_:)))
+    }
+
+    private func initTransitionAnimator() {
+        let containerView = transitionContext.containerView
+        let toView = transitionContext.view(forKey: .to)
+
+        if isPresenting, let toView = toView {
+            containerView.addSubview(toView)
         }
-        prepareInteraction()
+
+        let viewToTempHide = isPresenting ? toView : transitionContext.view(forKey: .from)
+        viewToTempHide?.isHidden = true
+
+        let animator = ImageViewerTransitionDriver.propertyAnimator()
+        animator.addAnimations { }
+        animator.addCompletion { [weak self] position in
+            viewToTempHide?.isHidden = false
+            let success = position == .end
+            print(success)
+            self?.transitionContext.completeTransition(success)
+        }
+        transitionAnimator = animator
     }
 
-    @objc private func updateInteraction(_ fromGesture: UIPanGestureRecognizer) {
-        switch fromGesture.state {
+    private func initMiddleView() {
+        if isPresenting {
+            middleView = transitionContext.view(forKey: .to)!.snapshotView(afterScreenUpdates: true)
+        } else {
+            let fromView = transitionContext.view(forKey: .from)!
+            let transitionView = sourceView ?? fromView
+            let snapshotFrame = transitionView.superview?.convert(transitionView.frame, to: fromView) ?? fromView.bounds
+            middleView = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: true, withCapInsets: .zero)
+            middleView.frame = snapshotFrame
+        }
+    }
+
+    private func initMiddleViewAnimator() {
+        let animator = ImageViewerTransitionAnimator.propertyAnimator()
+        middleView.frame = middleViewStartFrame()
+        animator.addAnimations { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.middleView.frame = strongSelf.middleViewTargetFrame()
+        }
+        middleViewAnimator = animator
+    }
+
+    func animate() {
+        UIView.animate(withDuration: 2.0) { [weak self] in
+            self?.transitionAnimator.startAnimation()
+//            self?.middleViewAnimator.startAnimation()
+        }
+    }
+
+    private func middleViewStartFrame() -> CGRect {
+        guard let sourceView = sourceView ?? transitionContext.view(forKey: .from) else {
+            return .zero
+        }
+
+        if isPresenting {
+            var frame: CGRect = .zero
+            frame.size = CGSize(width: sourceView.bounds.width, height: sourceView.bounds.height)
+            let center = sourceView.superview!.convert(sourceView.center, to: transitionContext.containerView)
+            frame.origin = CGPoint(x: center.x - (frame.size.width / 2), y: center.y - (frame.size.height / 2))
+            return frame
+        } else {
+            return sourceView.frame
+        }
+    }
+
+    private func middleViewTargetFrame() -> CGRect {
+        guard let targetView = targetView ?? transitionContext.view(forKey: .to) else {
+            return .zero
+        }
+
+        if isPresenting {
+            return targetView.frame
+        } else {
+            var frame: CGRect = .zero
+            frame.size = CGSize(width: targetView.bounds.width, height: targetView.bounds.height)
+            let center = targetView.superview!.convert(targetView.center, to: transitionContext.containerView)
+            frame.origin = CGPoint(x: center.x - (frame.size.width / 2), y: center.y - (frame.size.height / 2))
+            return frame
+        }
+    }
+}
+
+// MARK: - Interactive transition
+
+extension ImageViewerTransitionDriver {
+
+    @objc private func updateInteraction(_ sender: UIPanGestureRecognizer) {
+        switch sender.state {
         case .began, .changed:
-            let translation = fromGesture.translation(in: transitionContext.containerView)
-            print(transitionAnimator.state == .inactive)
-            transitionAnimator.fractionComplete = transitionAnimator.fractionComplete + translation.y
-            print(transitionAnimator.state == .inactive)
-            transitionContext.updateInteractiveTransition(transitionAnimator.fractionComplete + translation.y)
-            updateInteractiveView(translation)
-            fromGesture.setTranslation(.zero, in: transitionContext.containerView)
+            let translation = sender.translation(in: transitionContext.containerView)
+            let percentage = calculateProgress(translation)
+            transitionAnimator.fractionComplete = percentage
+            transitionContext.updateInteractiveTransition(percentage)
+            //            updateMiddleView(translation)
+            sender.setTranslation(.zero, in: transitionContext.containerView)
         case .ended, .cancelled:
             endInteraction()
         default:
@@ -102,13 +170,16 @@ class ImageViewerTransitionDriver: NSObject {
         }
     }
 
-    func prepareInteraction() {
-        guard let transitionView = transitionView, let fromView = transitionContext.view(forKey: .from) else {
-            return
+    private func calculateProgress(_ location: CGPoint) -> CGFloat {
+        if startLocation == nil {
+            startLocation = location
         }
-        let containerView = transitionContext.containerView
-        containerView.addSubview(transitionView)
-        fromView.isHidden = true
+        let oldLocation = currentLocation ?? .zero
+        let newLocation = CGPoint(x: oldLocation.x + location.x, y: oldLocation.y + location.y)
+        currentLocation = newLocation
+        let verticalDistance = newLocation.y - startLocation!.y
+        let progress = abs(verticalDistance / transitionContext.containerView.bounds.height)
+        return progress
     }
 
     func endInteraction() {
@@ -127,48 +198,39 @@ class ImageViewerTransitionDriver: NSObject {
     }
 
     private func completionPosition() -> UIViewAnimatingPosition {
-        print(transitionAnimator.fractionComplete)
-        if transitionAnimator.fractionComplete >= 0.8 {
-            return UIViewAnimatingPosition.end
+        if transitionAnimator.fractionComplete >= 0.5 {
+            return .end
         } else {
-            return UIViewAnimatingPosition.start
+            return .start
         }
     }
 
     func animate(_ toPosition: UIViewAnimatingPosition) {
         // TODO: pass velocity
-        let itemFrameAnimator = ImageViewerTransitionDriver.propertyAnimator()
-        itemFrameAnimator.addAnimations { [weak self] in
-            self?.transitionView?.transform = (toPosition == .start ? self?.startTransform : self?.targetTransform) ?? .identity
-        }
-
-        itemFrameAnimator.startAnimation()
-        self.itemFrameAnimator = itemFrameAnimator
+        //        let itemFrameAnimator = ImageViewerTransitionDriver.propertyAnimator()
+        //        itemFrameAnimator.addAnimations { [weak self] in
+        //            self?.transitionView?.transform = (toPosition == .start ? self?.startTransform : self?.targetTransform) ?? .identity
+        //        }
+        //
+        //        itemFrameAnimator.startAnimation()
+        //        self.itemFrameAnimator = itemFrameAnimator
 
         transitionAnimator.isReversed = (toPosition == .start)
 
         if transitionAnimator.state == .inactive {
             transitionAnimator.startAnimation()
         } else {
-            let durationFactor = CGFloat(itemFrameAnimator.duration / transitionAnimator.duration)
-            transitionAnimator.continueAnimation(withTimingParameters: nil, durationFactor: durationFactor)
+            //            let durationFactor = CGFloat(itemFrameAnimator.duration / transitionAnimator.duration)
+            let durationFactor = transitionAnimator.duration * Double(1 - transitionAnimator.fractionComplete)
+            transitionAnimator.continueAnimation(withTimingParameters: nil, durationFactor: CGFloat(durationFactor))
         }
     }
 
-    func pauseAnimation() {
-        itemFrameAnimator?.stopAnimation(true)
-        transitionAnimator.pauseAnimation()
-        transitionContext.pauseInteractiveTransition()
-    }
-
-    private func updateInteractiveView(_ translation: CGPoint) {
-        guard let transitionView = transitionView else {
-            return
-        }
-        let newTransform = CGAffineTransform(translationX: translation.x, y: translation.y)
-        print(newTransform)
-        DispatchQueue.main.async {
-            transitionView.transform = newTransform
-        }
-    }
+    //    private func updateMiddleView(_ translation: CGPoint) {
+    //        let currentCenter = animator.middleView.center
+    //        animator.middleView.center = CGPoint(x: currentCenter.x + translation.x, y: currentCenter.y + translation.y)
+    //        let progress = transitionAnimator.fractionComplete
+    //        let targetScale = animator.middleViewTargetTransform(transitionContext, middleView: animator.middleView)
+    //        animator.middleView.transform = CGAffineTransform(scaleX: targetScale.tx * progress, y: targetScale.ty * progress)
+    //    }
 }

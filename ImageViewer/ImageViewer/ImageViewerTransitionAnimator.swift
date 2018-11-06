@@ -14,9 +14,11 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
 
     var destinationView: UIView?
 
-    private var middleViewAnimator: UIViewPropertyAnimator?
+    private(set) var interactiveAnimator: UIViewPropertyAnimator!
 
-    private var middleView: UIView?
+    private(set) var middleViewAnimator: UIViewPropertyAnimator!
+
+    private(set) var middleView: UIView!
 
     private var isPresenting: Bool = true
 
@@ -54,20 +56,27 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
             return
         }
 
-        createMiddleViewIfNeeded(transitionContext)
-        UIView.animate(withDuration: transitionDuration(using: transitionContext)) { [weak self] in
-            self?.interruptibleAnimator(using: transitionContext).startAnimation()
+        let animator = createTransitionAnimator(transitionContext)
+        UIView.animate(withDuration: transitionDuration(using: transitionContext)) {
+            animator.startAnimation()
         }
 
-        if let middleView = middleView {
-            middleViewAnimator = createMiddleViewAnimator(transitionContext, middleView: middleView)
-        }
+        middleViewAnimator = createMiddleViewAnimator(transitionContext, middleView: middleView)
         middleViewAnimator?.startAnimation()
     }
 
     func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
+        if interactiveAnimator == nil {
+            interactiveAnimator = createTransitionAnimator(transitionContext)
+        }
+        return interactiveAnimator
+    }
+
+    private func createTransitionAnimator(_ transitionContext: UIViewControllerContextTransitioning) -> UIViewPropertyAnimator {
         let containerView = transitionContext.containerView
         let toView = transitionContext.view(forKey: .to)
+
+        createMiddleViewIfNeeded(transitionContext)
 
         if isPresenting, let toView = toView {
             containerView.addSubview(toView)
@@ -119,7 +128,7 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
         }
     }
 
-    private func middleViewStartTransform(_ transitionContext: UIViewControllerContextTransitioning, middleView: UIView) -> CGAffineTransform {
+    func middleViewStartTransform(_ transitionContext: UIViewControllerContextTransitioning, middleView: UIView) -> CGAffineTransform {
         if isPresenting {
             guard let fromView = sourceView ?? transitionContext.view(forKey: .from) else {
                 return .identity
@@ -136,7 +145,7 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
         }
     }
 
-    private func middleViewTargetTransform(_ transitionContext: UIViewControllerContextTransitioning, middleView: UIView) -> CGAffineTransform {
+    func middleViewTargetTransform(_ transitionContext: UIViewControllerContextTransitioning, middleView: UIView) -> CGAffineTransform {
         if isPresenting {
             return .identity
         } else {

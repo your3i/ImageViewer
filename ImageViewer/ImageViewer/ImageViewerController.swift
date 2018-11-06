@@ -38,7 +38,7 @@ class ImageViewerController: UIViewController {
 
     private var panGestureRecognizer: UIPanGestureRecognizer!
 
-    private var interactiveTransitionController: ImageViewerInteractiveTransitionController?
+    private var interactiveTransitionController = ImageViewerInteractiveTransitionController()
 
     static func viewController() -> ImageViewerController {
         let viewController = ImageViewerController()
@@ -101,7 +101,7 @@ class ImageViewerController: UIViewController {
         panGesture.maximumNumberOfTouches = 1
         view.addGestureRecognizer(panGesture)
         panGestureRecognizer = panGesture
-        interactiveTransitionController = ImageViewerInteractiveTransitionController(panGestureRecognizer)
+        interactiveTransitionController.panGestureRecognizer = panGesture
     }
 
     @objc private func handleTapOnView(_ sender: UITapGestureRecognizer) {
@@ -111,10 +111,8 @@ class ImageViewerController: UIViewController {
     @objc private func handlePanOnView(_ sender: UIPanGestureRecognizer) {
         switch sender.state {
         case .began:
-            interactiveTransitionController?.initiallyInteractive = true
+            interactiveTransitionController.initiallyInteractive = true
             dismiss(animated: true, completion: nil)
-        case .cancelled, .ended, .failed:
-            interactiveTransitionController?.tearDown()
         default:
             break
         }
@@ -175,28 +173,25 @@ extension ImageViewerController: UIViewControllerTransitioningDelegate {
     }
 
     func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
-        let animator = ImageViewerTransitionAnimator.instanceForPresent()
+        interactiveTransitionController.isPresenting = true
         if let sourceView = delegate?.imageViewerController(self, transitionViewForItemAt: startIndex) {
-            animator.sourceView = sourceView
+            interactiveTransitionController.sourceView = sourceView
         }
-        return animator
+        return interactiveTransitionController
     }
 
     func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
-        let animator = ImageViewerTransitionAnimator.instanceForDismiss()
-        if let currentPageIndex = currentPageIndex, let destinationView = delegate?.imageViewerController(self, transitionViewForItemAt: currentPageIndex) {
+        interactiveTransitionController.isPresenting = false
+        if let currentPageIndex = currentPageIndex, let targetView = delegate?.imageViewerController(self, transitionViewForItemAt: currentPageIndex) {
             itemViewControllers[currentPageIndex].resetZoomScale()
-            animator.sourceView = itemViewControllers[currentPageIndex].imageView
-            animator.destinationView = destinationView
+            interactiveTransitionController.sourceView = itemViewControllers[currentPageIndex].imageView
+            interactiveTransitionController.targetView = targetView
         }
-        return animator
+        return interactiveTransitionController
     }
 
     func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
-        if interactiveTransitionController?.wantsInteractiveStart ?? false {
-            if let animator = animator as? ImageViewerTransitionAnimator {
-                interactiveTransitionController?.setAnimator(animator)
-            }
+        if interactiveTransitionController.wantsInteractiveStart {
             return interactiveTransitionController
         } else {
             return nil
