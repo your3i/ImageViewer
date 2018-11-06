@@ -14,7 +14,9 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
 
     var destinationView: UIView?
 
-    var interactiveController: ImageViewerInteractiveTransitionController?
+    private var middleViewAnimator: UIViewPropertyAnimator?
+
+    private var middleView: UIView?
 
     private var isPresenting: Bool = true
 
@@ -32,8 +34,18 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
         return animator
     }
 
+    static func animationDuration() -> TimeInterval {
+        return propertyAnimator().duration
+    }
+
+    static func propertyAnimator(initialVelocity: CGVector = .zero) -> UIViewPropertyAnimator {
+        let timingPramaters = UISpringTimingParameters(mass: 2.5, stiffness: 1400, damping: 95, initialVelocity: initialVelocity)
+        // duration is not used when using UISpringTimingParameters, so set it to 0.0
+        return UIViewPropertyAnimator(duration: 0.0, timingParameters: timingPramaters)
+    }
+
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
-        return 0.3
+        return ImageViewerTransitionAnimator.animationDuration()
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
@@ -42,94 +54,103 @@ final class ImageViewerTransitionAnimator: NSObject, UIViewControllerAnimatedTra
             return
         }
 
-        if isPresenting {
-            presentingTransition(transitionContext)
-        } else {
-            dismissingTransition(transitionContext)
-        }
-    }
-
-    private func presentingTransition(_ transitionContext: UIViewControllerContextTransitioning) {
-        let complete = {
-            transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
+        createMiddleViewIfNeeded(transitionContext)
+        UIView.animate(withDuration: transitionDuration(using: transitionContext)) { [weak self] in
+            self?.interruptibleAnimator(using: transitionContext).startAnimation()
         }
 
-        guard let toView = transitionContext.view(forKey: .to), let toViewSnapshot = toView.snapshotView(afterScreenUpdates: true) else {
-            complete()
-            return
+        if let middleView = middleView {
+            middleViewAnimator = createMiddleViewAnimator(transitionContext, middleView: middleView)
         }
-
-        let containerView = transitionContext.containerView
-        containerView.addSubview(toView)
-        toView.isHidden = true
-        containerView.addSubview(toViewSnapshot)
-
-        guard let fromView = sourceView ?? transitionContext.view(forKey: .from) else {
-            complete()
-            return
-        }
-
-        let scaleTransform = CGAffineTransform(scaleX: fromView.bounds.width / toViewSnapshot.bounds.width, y: fromView.bounds.height / toViewSnapshot.bounds.height)
-        var translationTransfrom = CGAffineTransform(translationX: 0.0, y: 0.0)
-        if let toCenter = fromView.superview?.convert(fromView.center, to: containerView) {
-            translationTransfrom = CGAffineTransform(translationX: toCenter.x - toViewSnapshot.center.x, y: toCenter.y - toViewSnapshot.center.y)
-        }
-        toViewSnapshot.transform = scaleTransform.concatenating(translationTransfrom)
-        toViewSnapshot.alpha = 0.1
-
-        let duration = transitionDuration(using: transitionContext)
-        UIView.animate(withDuration: duration, animations: {
-            toViewSnapshot.transform = .identity
-            toViewSnapshot.alpha = 1.0
-        }, completion: { _ in
-            toViewSnapshot.removeFromSuperview()
-            toView.isHidden = false
-            complete()
-        })
-    }
-
-    private func dismissingTransition(_ transitionContext: UIViewControllerContextTransitioning) {
-        let complete = {
-            transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
-        }
-
-        guard
-            let fromView = transitionContext.view(forKey: .from),
-            let transitionView = sourceView ?? transitionContext.view(forKey: .from),
-            let snapshotFrame = transitionView.superview?.convert(transitionView.frame, to: fromView),
-            let snapshot = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: true, withCapInsets: .zero) else {
-                complete()
-                return
-        }
-
-        let containerView = transitionContext.containerView
-        snapshot.frame = snapshotFrame
-        containerView.addSubview(snapshot)
-        fromView.isHidden = true
-
-        guard let toView = destinationView ?? transitionContext.view(forKey: .to) else {
-            complete()
-            return
-        }
-
-        let scaleTransform = CGAffineTransform(scaleX: toView.bounds.width / snapshot.bounds.width, y: toView.bounds.height / snapshot.bounds.height)
-
-        var translationTransfrom = CGAffineTransform(translationX: 0.0, y: 0.0)
-        if let toCenter = toView.superview?.convert(toView.center, to: containerView) {
-            translationTransfrom = CGAffineTransform(translationX: toCenter.x - snapshot.center.x, y: toCenter.y - snapshot.center.y)
-        }
-
-        let duration = transitionDuration(using: transitionContext)
-        UIView.animate(withDuration: duration, animations: {
-            snapshot.transform = scaleTransform.concatenating(translationTransfrom)
-        }, completion: { _ in
-            fromView.isHidden = false
-            snapshot.removeFromSuperview()
-            complete()
-        })
+        middleViewAnimator?.startAnimation()
     }
 
     func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
-        return interactiveController!.transitionDriver!.transitionAnimator
+        let containerView = transitionContext.containerView
+        let toView = transitionContext.view(forKey: .to)
+
+        if isPresenting, let toView = toView {
+            containerView.addSubview(toView)
+        }
+        if let middleView = middleView {
+            containerView.addSubview(middleView)
+        }
+
+        let viewToTempHide = isPresenting ? toView : transitionContext.view(forKey: .from)
+        viewToTempHide?.isHidden = true
+        middleView?.alpha = isPresenting ? 0.8 : 1.0
+
+        let duration = transitionDuration(using: transitionContext)
+        let animator = UIViewPropertyAnimator(duration: duration, curve: .easeOut, animations: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.middleView?.alpha = strongSelf.isPresenting ? 1.0 : 0.8
+        })
+        animator.addCompletion { [weak self] position in
+            viewToTempHide?.isHidden = false
+            self?.middleView?.removeFromSuperview()
+            transitionContext.completeTransition(position == .end)
+        }
+        return animator
+    }
+
+    private func createMiddleViewAnimator(_ transitionContext: UIViewControllerContextTransitioning, middleView: UIView) -> UIViewPropertyAnimator? {
+        let animator = ImageViewerTransitionAnimator.propertyAnimator()
+        middleView.transform = middleViewStartTransform(transitionContext, middleView: middleView)
+        animator.addAnimations { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            middleView.transform = strongSelf.middleViewTargetTransform(transitionContext, middleView: middleView)
+        }
+        return animator
+    }
+
+    private func createMiddleViewIfNeeded(_ transitionContext: UIViewControllerContextTransitioning) {
+        if isPresenting {
+            middleView = transitionContext.view(forKey: .to)!.snapshotView(afterScreenUpdates: true)
+        } else {
+            let fromView = transitionContext.view(forKey: .from)!
+            let transitionView = sourceView ?? fromView
+            let snapshotFrame = transitionView.superview?.convert(transitionView.frame, to: fromView) ?? fromView.bounds
+            middleView = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: true, withCapInsets: .zero)
+            middleView?.frame = snapshotFrame
+        }
+    }
+
+    private func middleViewStartTransform(_ transitionContext: UIViewControllerContextTransitioning, middleView: UIView) -> CGAffineTransform {
+        if isPresenting {
+            guard let fromView = sourceView ?? transitionContext.view(forKey: .from) else {
+                return .identity
+            }
+
+            let scaleTransform = CGAffineTransform(scaleX: fromView.bounds.width / middleView.bounds.width, y: fromView.bounds.height / middleView.bounds.height)
+            var translationTransfrom = CGAffineTransform(translationX: 0.0, y: 0.0)
+            if let toCenter = fromView.superview?.convert(fromView.center, to: transitionContext.containerView) {
+                translationTransfrom = CGAffineTransform(translationX: toCenter.x - middleView.center.x, y: toCenter.y - middleView.center.y)
+            }
+            return scaleTransform.concatenating(translationTransfrom)
+        } else {
+            return .identity
+        }
+    }
+
+    private func middleViewTargetTransform(_ transitionContext: UIViewControllerContextTransitioning, middleView: UIView) -> CGAffineTransform {
+        if isPresenting {
+            return .identity
+        } else {
+            guard let toView = destinationView ?? transitionContext.view(forKey: .to) else {
+                return .identity
+            }
+
+            let scaleTransform = CGAffineTransform(scaleX: toView.bounds.width / middleView.bounds.width, y: toView.bounds.height / middleView.bounds.height)
+
+            var translationTransfrom = CGAffineTransform(translationX: 0.0, y: 0.0)
+            if let toCenter = toView.superview?.convert(toView.center, to: transitionContext.containerView) {
+                translationTransfrom = CGAffineTransform(translationX: toCenter.x - middleView.center.x, y: toCenter.y - middleView.center.y)
+            }
+            return scaleTransform.concatenating(translationTransfrom)
+        }
     }
 }

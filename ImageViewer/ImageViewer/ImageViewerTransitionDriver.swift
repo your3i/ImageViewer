@@ -89,10 +89,11 @@ class ImageViewerTransitionDriver: NSObject {
         switch fromGesture.state {
         case .began, .changed:
             let translation = fromGesture.translation(in: transitionContext.containerView)
+            print(transitionAnimator.state == .inactive)
+            transitionAnimator.fractionComplete = transitionAnimator.fractionComplete + translation.y
+            print(transitionAnimator.state == .inactive)
+            transitionContext.updateInteractiveTransition(transitionAnimator.fractionComplete + translation.y)
             updateInteractiveView(translation)
-//            let percentage = abs( translation.y / (transitionContext.containerView.bounds.height / 2))
-//            transitionAnimator.fractionComplete = percentage
-//            transitionContext.updateInteractiveTransition(percentage)
             fromGesture.setTranslation(.zero, in: transitionContext.containerView)
         case .ended, .cancelled:
             endInteraction()
@@ -106,7 +107,6 @@ class ImageViewerTransitionDriver: NSObject {
             return
         }
         let containerView = transitionContext.containerView
-        containerView.backgroundColor = .yellow
         containerView.addSubview(transitionView)
         fromView.isHidden = true
     }
