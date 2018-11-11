@@ -31,6 +31,7 @@ extension ImageViewerInteractiveTransitionController: UIViewControllerAnimatedTr
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
         let driver = ImageViewerTransitionDriver(transitionContext, isPresenting: isPresenting)
+        interactiveTransitionDriver = driver
         driver.sourceView = sourceView
         driver.targetView = targetView
         driver.animate()
@@ -38,6 +39,10 @@ extension ImageViewerInteractiveTransitionController: UIViewControllerAnimatedTr
 
     func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
         return interactiveTransitionDriver!.transitionAnimator
+    }
+
+    func animationEnded(_ transitionCompleted: Bool) {
+        interactiveTransitionDriver = nil
     }
 }
 

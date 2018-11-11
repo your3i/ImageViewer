@@ -22,9 +22,21 @@ class ImageViewerTransitionDriver: NSObject {
 
     private(set) var transitionAnimator: UIViewPropertyAnimator!
 
-    private var middleViewAnimator: UIViewPropertyAnimator!
+    private var middleViewAnimator: UIViewPropertyAnimator {
+        return createMiddleViewAnimator()
+    }
 
-    private var middleView: UIView!
+    private var _middleView: UIView?
+
+    private var middleView: UIView {
+        let view = _middleView ?? createMiddleView()
+        _middleView = view
+        return view
+    }
+
+    private var viewToTempHide: UIView? {
+        return isPresenting ? transitionContext.view(forKey: .to) : transitionContext.view(forKey: .from)
+    }
 
     private var startLocation: CGPoint?
 
@@ -35,9 +47,10 @@ class ImageViewerTransitionDriver: NSObject {
     }
 
     static func propertyAnimator(initialVelocity: CGVector = .zero) -> UIViewPropertyAnimator {
-        let timingPramaters = UISpringTimingParameters(mass: 2.5, stiffness: 1400, damping: 95, initialVelocity: initialVelocity)
+        let timingParameters = UISpringTimingParameters(mass: 2.5, stiffness: 1400, damping: 95, initialVelocity: initialVelocity)
         // duration is not used when using UISpringTimingParameters, so set it to 0.0
-        return UIViewPropertyAnimator(duration: 0.0, timingParameters: timingPramaters)
+//        let timingParameters = UICubicTimingParameters(animationCurve: .easeOut)
+        return UIViewPropertyAnimator(duration: 2.0, timingParameters: timingParameters)
     }
 
     static func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
@@ -48,8 +61,6 @@ class ImageViewerTransitionDriver: NSObject {
         self.transitionContext = transitionContext
         self.isPresenting = isPresenting
         super.init()
-        initMiddleView()
-        initMiddleViewAnimator()
         initTransitionAnimator()
     }
 
@@ -58,63 +69,64 @@ class ImageViewerTransitionDriver: NSObject {
         self.transitionContext = transitionContext
         self.isPresenting = isPresenting
         super.init()
-        initMiddleView()
-        initMiddleViewAnimator()
         initTransitionAnimator()
         self.panGestureRecognizer?.addTarget(self, action: #selector(updateInteraction(_:)))
     }
 
-    private func initTransitionAnimator() {
+    private func prepareContainerView() {
         let containerView = transitionContext.containerView
         let toView = transitionContext.view(forKey: .to)
 
         if isPresenting, let toView = toView {
             containerView.addSubview(toView)
         }
-
-        let viewToTempHide = isPresenting ? toView : transitionContext.view(forKey: .from)
+        containerView.addSubview(middleView)
         viewToTempHide?.isHidden = true
+    }
 
+    private func initTransitionAnimator() {
         let animator = ImageViewerTransitionDriver.propertyAnimator()
         animator.addAnimations { }
         animator.addCompletion { [weak self] position in
-            viewToTempHide?.isHidden = false
+            self?.viewToTempHide?.isHidden = false
             let success = position == .end
-            print(success)
             self?.transitionContext.completeTransition(success)
         }
         transitionAnimator = animator
     }
 
-    private func initMiddleView() {
+    private func createMiddleView() -> UIView {
         if isPresenting {
-            middleView = transitionContext.view(forKey: .to)!.snapshotView(afterScreenUpdates: true)
+            return transitionContext.view(forKey: .to)!.snapshotView(afterScreenUpdates: true)!
         } else {
             let fromView = transitionContext.view(forKey: .from)!
             let transitionView = sourceView ?? fromView
             let snapshotFrame = transitionView.superview?.convert(transitionView.frame, to: fromView) ?? fromView.bounds
-            middleView = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: true, withCapInsets: .zero)
-            middleView.frame = snapshotFrame
+            let view = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: true, withCapInsets: .zero)
+            view?.frame = snapshotFrame
+            return view!
         }
     }
 
-    private func initMiddleViewAnimator() {
+    private func createMiddleViewAnimator() -> UIViewPropertyAnimator {
         let animator = ImageViewerTransitionAnimator.propertyAnimator()
-        middleView.frame = middleViewStartFrame()
+        let startFrame = middleViewStartFrame()
+        let targetFrame = middleViewTargetFrame()
+        middleView.frame = startFrame
         animator.addAnimations { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.middleView.frame = strongSelf.middleViewTargetFrame()
+            self?.middleView.frame = targetFrame
         }
-        middleViewAnimator = animator
+        animator.addCompletion { [weak self] _ in
+            self?.middleView.removeFromSuperview()
+            self?._middleView = nil
+        }
+        return animator
     }
 
     func animate() {
-        UIView.animate(withDuration: 2.0) { [weak self] in
-            self?.transitionAnimator.startAnimation()
-//            self?.middleViewAnimator.startAnimation()
-        }
+        prepareContainerView()
+        transitionAnimator.startAnimation()
+        middleViewAnimator.startAnimation()
     }
 
     private func middleViewStartFrame() -> CGRect {
