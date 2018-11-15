@@ -82,13 +82,23 @@ class ImageViewerTransitionDriver: NSObject {
         }
         containerView.addSubview(middleView)
         viewToTempHide?.isHidden = true
+        _middleView?.alpha = 0.0
+    }
+
+    private func tearDown() {
+        viewToTempHide?.isHidden = false
+        _middleView?.removeFromSuperview()
+        _middleView = nil
     }
 
     private func initTransitionAnimator() {
         let animator = ImageViewerTransitionDriver.propertyAnimator()
-        animator.addAnimations { }
+        animator.addAnimations { [weak self] in
+            // dimming view入れたら消す
+            self?._middleView?.alpha = 1.0
+        }
         animator.addCompletion { [weak self] position in
-            self?.viewToTempHide?.isHidden = false
+            self?.tearDown()
             let success = position == .end
             self?.transitionContext.completeTransition(success)
         }
@@ -102,7 +112,7 @@ class ImageViewerTransitionDriver: NSObject {
             let fromView = transitionContext.view(forKey: .from)!
             let transitionView = sourceView ?? fromView
             let snapshotFrame = transitionView.superview?.convert(transitionView.frame, to: fromView) ?? fromView.bounds
-            let view = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: true, withCapInsets: .zero)
+            let view = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: false, withCapInsets: .zero)
             view?.frame = snapshotFrame
             return view!
         }
