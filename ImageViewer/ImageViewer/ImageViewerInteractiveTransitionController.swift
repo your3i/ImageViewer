@@ -54,6 +54,8 @@ extension ImageViewerInteractiveTransitionController: UIViewControllerInteractiv
 
     func startInteractiveTransition(_ transitionContext: UIViewControllerContextTransitioning) {
         interactiveTransitionDriver = ImageViewerTransitionDriver(transitionContext, isPresenting: isPresenting, panGestureRecognizer: panGestureRecognizer!)
+        interactiveTransitionDriver?.sourceView = sourceView
+        interactiveTransitionDriver?.targetView = targetView
     }
 
     var wantsInteractiveStart: Bool {

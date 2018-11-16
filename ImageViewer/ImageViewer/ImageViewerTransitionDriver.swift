@@ -80,7 +80,10 @@ class ImageViewerTransitionDriver: NSObject {
         if isPresenting, let toView = toView {
             containerView.addSubview(toView)
         }
+
         containerView.addSubview(middleView)
+        let startFrame = middleViewStartFrame()
+        middleView.frame = startFrame
         viewToTempHide?.isHidden = true
         containerView.backgroundColor = .black
         containerView.alpha = isPresenting ? 0.0 : 1.0
@@ -123,9 +126,7 @@ class ImageViewerTransitionDriver: NSObject {
 
     private func createMiddleViewAnimator() -> UIViewPropertyAnimator {
         let animator = ImageViewerTransitionAnimator.propertyAnimator()
-        let startFrame = middleViewStartFrame()
         let targetFrame = middleViewTargetFrame()
-        middleView.frame = startFrame
         animator.addAnimations { [weak self] in
             self?.middleView.frame = targetFrame
         }
@@ -154,7 +155,7 @@ class ImageViewerTransitionDriver: NSObject {
             frame.origin = CGPoint(x: center.x - (frame.size.width / 2), y: center.y - (frame.size.height / 2))
             return frame
         } else {
-            return sourceView.frame
+            return sourceView.superview!.convert(sourceView.frame, to: containerView)
         }
     }
 
@@ -182,11 +183,15 @@ extension ImageViewerTransitionDriver {
     @objc private func updateInteraction(_ sender: UIPanGestureRecognizer) {
         switch sender.state {
         case .began, .changed:
+            if _middleView == nil {
+                prepareContainerView()
+            }
+
             let translation = sender.translation(in: transitionContext.containerView)
             let percentage = calculateProgress(translation)
             transitionAnimator.fractionComplete = percentage
             transitionContext.updateInteractiveTransition(percentage)
-            print(percentage)
+            updateMiddleView(translation)
             sender.setTranslation(.zero, in: transitionContext.containerView)
         case .ended, .cancelled:
             endInteraction()
@@ -251,11 +256,18 @@ extension ImageViewerTransitionDriver {
         }
     }
 
-    //    private func updateMiddleView(_ translation: CGPoint) {
-    //        let currentCenter = animator.middleView.center
-    //        animator.middleView.center = CGPoint(x: currentCenter.x + translation.x, y: currentCenter.y + translation.y)
-    //        let progress = transitionAnimator.fractionComplete
-    //        let targetScale = animator.middleViewTargetTransform(transitionContext, middleView: animator.middleView)
-    //        animator.middleView.transform = CGAffineTransform(scaleX: targetScale.tx * progress, y: targetScale.ty * progress)
-    //    }
+        private func updateMiddleView(_ translation: CGPoint) {
+            let currentCenter = middleView.center
+            let middleCenter = CGPoint(x: currentCenter.x + translation.x, y: currentCenter.y + translation.y)
+            let progress = transitionAnimator.fractionComplete
+            let startSize = middleViewStartFrame().size
+            let targetSize = middleViewTargetFrame().size
+            let diffSizeWidth = startSize.width - targetSize.width
+            let diffSizeHeight = startSize.height - targetSize.height
+            let progressDiffWidth = diffSizeWidth * progress
+            let progressDiffHeight = diffSizeHeight * progress
+            let midSize = CGSize(width: startSize.width - progressDiffWidth, height: startSize.height - progressDiffHeight)
+            let middleFrame = CGRect(x: middleCenter.x - (midSize.width / 2), y: middleCenter.y - (midSize.height / 2), width: midSize.width, height: midSize.height)
+            middleView.frame = middleFrame
+        }
 }
