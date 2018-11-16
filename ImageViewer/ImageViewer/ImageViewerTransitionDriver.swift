@@ -22,8 +22,12 @@ class ImageViewerTransitionDriver: NSObject {
 
     private(set) var transitionAnimator: UIViewPropertyAnimator!
 
+    private var _middleViewAnimator: UIViewPropertyAnimator?
+
     private var middleViewAnimator: UIViewPropertyAnimator {
-        return createMiddleViewAnimator()
+        let animator = _middleViewAnimator ?? createMiddleViewAnimator()
+        _middleViewAnimator = animator
+        return animator
     }
 
     private var _middleView: UIView?
@@ -239,7 +243,7 @@ extension ImageViewerTransitionDriver {
     }
 
     private func completionPosition() -> UIViewAnimatingPosition {
-        if transitionAnimator.fractionComplete >= 0.8 {
+        if transitionAnimator.fractionComplete >= 0.7 {
             return .end
         } else {
             return .start
@@ -248,21 +252,24 @@ extension ImageViewerTransitionDriver {
 
     func animate(_ toPosition: UIViewAnimatingPosition) {
         // TODO: pass velocity
-        //        let itemFrameAnimator = ImageViewerTransitionDriver.propertyAnimator()
-        //        itemFrameAnimator.addAnimations { [weak self] in
-        //            self?.transitionView?.transform = (toPosition == .start ? self?.startTransform : self?.targetTransform) ?? .identity
-        //        }
-        //
-        //        itemFrameAnimator.startAnimation()
-        //        self.itemFrameAnimator = itemFrameAnimator
+        let animator = ImageViewerTransitionDriver.propertyAnimator()
+        animator.addAnimations { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.middleView.frame = (toPosition == .start ? strongSelf.middleViewStartFrame() : strongSelf.middleViewTargetFrame())
+        }
+
+        animator.startAnimation()
+        _middleViewAnimator = animator
 
         transitionAnimator.isReversed = (toPosition == .start)
 
         if transitionAnimator.state == .inactive {
             transitionAnimator.startAnimation()
         } else {
-            //            let durationFactor = CGFloat(itemFrameAnimator.duration / transitionAnimator.duration)
-            let durationFactor = transitionAnimator.duration * Double(1 - transitionAnimator.fractionComplete)
+            let durationFactor = CGFloat(middleViewAnimator.duration / transitionAnimator.duration)
+//            let durationFactor = transitionAnimator.duration * Double(1 - transitionAnimator.fractionComplete)
             transitionAnimator.continueAnimation(withTimingParameters: nil, durationFactor: CGFloat(durationFactor))
         }
     }
