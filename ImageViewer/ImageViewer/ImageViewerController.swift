@@ -68,6 +68,12 @@ class ImageViewerController: UIViewController {
         addDisimssPanGestureRecognizer()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // ここに入れていいのかわからない
+        view.backgroundColor = .black
+    }
+
     func reload() {
         itemViewControllers.removeAll()
 

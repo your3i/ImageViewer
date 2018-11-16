@@ -46,6 +46,12 @@ class ImageViewerTransitionDriver: NSObject {
         return transitionContext.containerView
     }
 
+    private let dimmingView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .black
+        return view
+    }()
+
     static func propertyAnimator(initialVelocity: CGVector = .zero) -> UIViewPropertyAnimator {
         let timingParameters = UISpringTimingParameters(mass: 2.5, stiffness: 1400, damping: 95, initialVelocity: initialVelocity)
         // duration is not used when using UISpringTimingParameters, so set it to 0.0
@@ -78,21 +84,26 @@ class ImageViewerTransitionDriver: NSObject {
         let toView = transitionContext.view(forKey: .to)
 
         if isPresenting, let toView = toView {
+            containerView.addSubview(dimmingView)
             containerView.addSubview(toView)
+        } else {
+            containerView.addSubview(dimmingView)
         }
 
         containerView.addSubview(middleView)
         let startFrame = middleViewStartFrame()
         middleView.frame = startFrame
         viewToTempHide?.isHidden = true
-        containerView.backgroundColor = .black
-        containerView.alpha = isPresenting ? 0.0 : 1.0
+
+        dimmingView.frame = containerView.bounds
+        dimmingView.alpha = isPresenting ? 0.0 : 1.0
     }
 
     private func tearDown() {
         viewToTempHide?.isHidden = false
         _middleView?.removeFromSuperview()
         _middleView = nil
+        dimmingView.removeFromSuperview()
     }
 
     private func initTransitionAnimator() {
@@ -101,7 +112,7 @@ class ImageViewerTransitionDriver: NSObject {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.containerView.alpha = strongSelf.isPresenting ? 1.0 : 0.0
+            strongSelf.dimmingView.alpha = strongSelf.isPresenting ? 1.0 : 0.0
         }
         animator.addCompletion { [weak self] position in
             self?.tearDown()
