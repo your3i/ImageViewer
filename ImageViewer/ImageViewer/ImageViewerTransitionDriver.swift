@@ -82,7 +82,8 @@ class ImageViewerTransitionDriver: NSObject {
         }
         containerView.addSubview(middleView)
         viewToTempHide?.isHidden = true
-        _middleView?.alpha = 0.0
+        containerView.backgroundColor = .black
+        containerView.alpha = isPresenting ? 0.0 : 1.0
     }
 
     private func tearDown() {
@@ -94,8 +95,10 @@ class ImageViewerTransitionDriver: NSObject {
     private func initTransitionAnimator() {
         let animator = ImageViewerTransitionDriver.propertyAnimator()
         animator.addAnimations { [weak self] in
-            // dimming view入れたら消す
-            self?._middleView?.alpha = 1.0
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.containerView.alpha = strongSelf.isPresenting ? 1.0 : 0.0
         }
         animator.addCompletion { [weak self] position in
             self?.tearDown()
@@ -183,7 +186,7 @@ extension ImageViewerTransitionDriver {
             let percentage = calculateProgress(translation)
             transitionAnimator.fractionComplete = percentage
             transitionContext.updateInteractiveTransition(percentage)
-            //            updateMiddleView(translation)
+            print(percentage)
             sender.setTranslation(.zero, in: transitionContext.containerView)
         case .ended, .cancelled:
             endInteraction()
@@ -200,7 +203,7 @@ extension ImageViewerTransitionDriver {
         let newLocation = CGPoint(x: oldLocation.x + location.x, y: oldLocation.y + location.y)
         currentLocation = newLocation
         let verticalDistance = newLocation.y - startLocation!.y
-        let progress = abs(verticalDistance / transitionContext.containerView.bounds.height)
+        let progress = abs(verticalDistance / (transitionContext.containerView.bounds.height / 2))
         return progress
     }
 
@@ -220,7 +223,7 @@ extension ImageViewerTransitionDriver {
     }
 
     private func completionPosition() -> UIViewAnimatingPosition {
-        if transitionAnimator.fractionComplete >= 0.5 {
+        if transitionAnimator.fractionComplete >= 0.8 {
             return .end
         } else {
             return .start

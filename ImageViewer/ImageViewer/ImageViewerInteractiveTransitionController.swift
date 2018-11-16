@@ -43,6 +43,10 @@ extension ImageViewerInteractiveTransitionController: UIViewControllerAnimatedTr
 
     func animationEnded(_ transitionCompleted: Bool) {
         interactiveTransitionDriver = nil
+        initiallyInteractive = false
+        isPresenting = true
+        sourceView = nil
+        targetView = nil
     }
 }
 
