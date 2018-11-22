@@ -174,10 +174,6 @@ extension ImageViewerController: UIPageViewControllerDataSource, UIPageViewContr
 
 extension ImageViewerController: UIViewControllerTransitioningDelegate {
 
-//    func presentationController(forPresented presented: UIViewController, presenting: UIViewController?, source: UIViewController) -> UIPresentationController? {
-//        return ImageViewerPresentationController(presentedViewController: presented, presenting: presenting)
-//    }
-
     func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         interactiveTransitionController.isPresenting = true
         if let sourceView = delegate?.imageViewerController(self, transitionViewForItemAt: startIndex) {
