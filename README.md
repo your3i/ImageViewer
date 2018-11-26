@@ -14,7 +14,7 @@ Preview images (original images are loaded lazily), zoom in/out, tap to dismiss 
 ## Features
 - [x] load one or more images
   - [x] scroll to view other images
-  - [ ] ~~複数枚の場合page control を表示(gived up)
+  - [ ] ~~複数枚の場合page control を表示(gived up)~~
 - [x] open
   - [x] open and start viewing from the tapped image
 - [x] dismiss
