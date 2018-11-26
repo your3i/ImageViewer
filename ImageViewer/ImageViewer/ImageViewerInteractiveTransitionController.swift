@@ -20,7 +20,7 @@ class ImageViewerInteractiveTransitionController: NSObject {
 
     var panGestureRecognizer: UIPanGestureRecognizer?
 
-    private(set) var interactiveTransitionDriver: ImageViewerTransitionDriver?
+    private(set) var transitionDriver: ImageViewerTransitionDriver?
 }
 
 extension ImageViewerInteractiveTransitionController: UIViewControllerAnimatedTransitioning {
@@ -30,19 +30,17 @@ extension ImageViewerInteractiveTransitionController: UIViewControllerAnimatedTr
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
-        let driver = ImageViewerTransitionDriver(transitionContext, isPresenting: isPresenting)
-        interactiveTransitionDriver = driver
-        driver.sourceView = sourceView
-        driver.targetView = targetView
-        driver.animate()
+        let driver = ImageViewerTransitionDriver(transitionContext, isPresenting: isPresenting, sourceView: sourceView, targetView: targetView)
+        transitionDriver = driver
+        driver.startAnimation()
     }
 
     func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
-        return interactiveTransitionDriver!.transitionAnimator
+        return transitionDriver!.interactiveAnimator
     }
 
     func animationEnded(_ transitionCompleted: Bool) {
-        interactiveTransitionDriver = nil
+        transitionDriver = nil
         initiallyInteractive = false
         isPresenting = true
         sourceView = nil
@@ -53,9 +51,9 @@ extension ImageViewerInteractiveTransitionController: UIViewControllerAnimatedTr
 extension ImageViewerInteractiveTransitionController: UIViewControllerInteractiveTransitioning {
 
     func startInteractiveTransition(_ transitionContext: UIViewControllerContextTransitioning) {
-        interactiveTransitionDriver = ImageViewerTransitionDriver(transitionContext, isPresenting: isPresenting, panGestureRecognizer: panGestureRecognizer!)
-        interactiveTransitionDriver?.sourceView = sourceView
-        interactiveTransitionDriver?.targetView = targetView
+        transitionDriver = ImageViewerTransitionDriver(transitionContext, isPresenting: isPresenting, panGestureRecognizer: panGestureRecognizer!, sourceView: sourceView, targetView: targetView)
+        transitionDriver?.sourceView = sourceView
+        transitionDriver?.targetView = targetView
     }
 
     var wantsInteractiveStart: Bool {

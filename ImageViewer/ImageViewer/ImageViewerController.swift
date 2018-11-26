@@ -70,7 +70,6 @@ class ImageViewerController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // ここに入れていいのかわからない
         view.backgroundColor = .black
     }
 
@@ -173,10 +172,6 @@ extension ImageViewerController: UIPageViewControllerDataSource, UIPageViewContr
 }
 
 extension ImageViewerController: UIViewControllerTransitioningDelegate {
-
-//    func presentationController(forPresented presented: UIViewController, presenting: UIViewController?, source: UIViewController) -> UIPresentationController? {
-//        return ImageViewerPresentationController(presentedViewController: presented, presenting: presenting)
-//    }
 
     func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         interactiveTransitionController.isPresenting = true
