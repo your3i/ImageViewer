@@ -51,6 +51,11 @@ class ImageViewerScrollView: UIScrollView {
         updateInsets()
     }
 
+    func toggleZoom() {
+        let nextScale = zoomScale != minimumZoomScale ? minimumZoomScale : 2 * minimumZoomScale
+        setZoomScale(nextScale, animated: true)
+    }
+
     func resetZoomScale() {
         setZoomScale(minimumZoomScale, animated: true)
     }

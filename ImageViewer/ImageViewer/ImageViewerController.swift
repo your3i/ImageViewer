@@ -64,7 +64,7 @@ class ImageViewerController: UIViewController {
         pageViewController.delegate = self
         reload()
 
-        addTapDismissGestureRecognizer()
+        addTapGestureRecognizers()
         addDisimssPanGestureRecognizer()
     }
 
@@ -96,9 +96,15 @@ class ImageViewerController: UIViewController {
         }
     }
 
-    private func addTapDismissGestureRecognizer() {
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapOnView(_:)))
-        view.addGestureRecognizer(tapGesture)
+    private func addTapGestureRecognizers() {
+        let singleTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapOnView(_:)))
+        view.addGestureRecognizer(singleTapGesture)
+
+        let doubleTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTapOnView(_:)))
+        doubleTapGesture.numberOfTapsRequired = 2
+        view.addGestureRecognizer(doubleTapGesture)
+
+        singleTapGesture.require(toFail: doubleTapGesture)
     }
 
     private func addDisimssPanGestureRecognizer() {
@@ -111,6 +117,13 @@ class ImageViewerController: UIViewController {
 
     @objc private func handleTapOnView(_ sender: UITapGestureRecognizer) {
         dismiss(animated: true, completion: nil)
+    }
+
+    @objc private func handleDoubleTapOnView(_ sender: UITapGestureRecognizer) {
+        guard let currentPage = currentPageIndex else {
+            return
+        }
+        itemViewControllers[currentPage].toggleZoom()
     }
 
     @objc private func handlePanOnView(_ sender: UIPanGestureRecognizer) {
