@@ -14,7 +14,7 @@ Preview images (original images are loaded lazily), zoom in/out, tap to dismiss 
 ## Features
 - [x] load one or more images
   - [x] scroll to view other images
-  - [ ] ~~show page control(gived up)~~
+  - [ ] ~~show page control(not yet and no plan)~~
 - [x] open
   - [x] open and start viewing from the tapped image
 - [x] dismiss
