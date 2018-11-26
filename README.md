@@ -1,5 +1,5 @@
 # ImageViewer
-This is a demo project of an image viewer with transitions which are kind of like the transitions of the "Photos" app.
+This is a demo project of an image viewer with the "Photos" app like transitions.
 
 ## Demo
 #### Screen #1
