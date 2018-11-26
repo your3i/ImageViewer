@@ -70,7 +70,6 @@ class ImageViewerController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // ここに入れていいのかわからない
         view.backgroundColor = .black
     }
 

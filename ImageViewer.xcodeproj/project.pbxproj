@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0108DFAD1A1037473AA33C5E /* Pods_ImageViewer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DFC98AA52EF690FC4D33652A /* Pods_ImageViewer.framework */; };
+		C0025D3E21AB868800686B06 /* ImageViewerPanTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0025D3D21AB868800686B06 /* ImageViewerPanTracker.swift */; };
 		C0B489E2218FEDB2006201DB /* ImageViewerInteractiveTransitionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B489E1218FEDB2006201DB /* ImageViewerInteractiveTransitionController.swift */; };
 		C0B489E621903DDC006201DB /* ImageViewerTransitionDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B489E521903DDC006201DB /* ImageViewerTransitionDriver.swift */; };
 		C0FB97A7218EA8D8000AD027 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FB97A6218EA8D8000AD027 /* AppDelegate.swift */; };
@@ -24,6 +25,7 @@
 /* Begin PBXFileReference section */
 		0066FD5BDC5062DFBC16A0FC /* Pods-ImageViewer.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ImageViewer.debug.xcconfig"; path = "Pods/Target Support Files/Pods-ImageViewer/Pods-ImageViewer.debug.xcconfig"; sourceTree = "<group>"; };
 		59BBE8376E67D462311EB544 /* Pods-ImageViewer.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ImageViewer.release.xcconfig"; path = "Pods/Target Support Files/Pods-ImageViewer/Pods-ImageViewer.release.xcconfig"; sourceTree = "<group>"; };
+		C0025D3D21AB868800686B06 /* ImageViewerPanTracker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageViewerPanTracker.swift; sourceTree = "<group>"; };
 		C0B489E1218FEDB2006201DB /* ImageViewerInteractiveTransitionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageViewerInteractiveTransitionController.swift; sourceTree = "<group>"; };
 		C0B489E521903DDC006201DB /* ImageViewerTransitionDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageViewerTransitionDriver.swift; sourceTree = "<group>"; };
 		C0FB97A3218EA8D8000AD027 /* ImageViewer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ImageViewer.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -108,6 +110,7 @@
 				C0B489E1218FEDB2006201DB /* ImageViewerInteractiveTransitionController.swift */,
 				C0FB97C1218EAA24000AD027 /* ImageViewerItem.swift */,
 				C0FB97BB218EA9CA000AD027 /* ImageViewerItemViewController.swift */,
+				C0025D3D21AB868800686B06 /* ImageViewerPanTracker.swift */,
 				C0FB97B9218EA9A3000AD027 /* ImageViewerScrollView.swift */,
 				C0B489E521903DDC006201DB /* ImageViewerTransitionDriver.swift */,
 			);
@@ -237,6 +240,7 @@
 			files = (
 				C0FB97C2218EAA24000AD027 /* ImageViewerItem.swift in Sources */,
 				C0B489E621903DDC006201DB /* ImageViewerTransitionDriver.swift in Sources */,
+				C0025D3E21AB868800686B06 /* ImageViewerPanTracker.swift in Sources */,
 				C0FB97C4218ECED6000AD027 /* ImageViewerController.swift in Sources */,
 				C0FB97A9218EA8D8000AD027 /* ViewController.swift in Sources */,
 				C0FB97BC218EA9CA000AD027 /* ImageViewerItemViewController.swift in Sources */,
