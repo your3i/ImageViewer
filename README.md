@@ -1,6 +1,8 @@
 # ImageViewer
 This is a demo project of an image viewer with the "Photos" app like transitions.
 
+🚨It's not maintained and has several bugs.
+
 ## Demo
 #### Screen #1
 Three thumnail images are listed.
