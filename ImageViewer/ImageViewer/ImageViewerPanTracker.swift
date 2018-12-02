@@ -6,7 +6,6 @@
 //  Copyright © 2018 your3i. All rights reserved.
 //
 
-import Foundation
 import UIKit
 
 class ImageViewerPanTracker: NSObject {
@@ -14,6 +13,8 @@ class ImageViewerPanTracker: NSObject {
     let startFrame: CGRect
 
     let targetFrame: CGRect
+
+    let finalFrame: CGRect
 
     private var startLocation: CGPoint?
 
@@ -31,14 +32,29 @@ class ImageViewerPanTracker: NSObject {
 
     var dismissalProgress: CGFloat = 1.0
 
+    var velocityThreshold: CGFloat = 2500.0
+
+    var panDistanceThreshold: CGFloat = UIScreen.main.bounds.height / 2
+
     var shouldFinishDismissal: Bool {
-        return (calculateProgress() >= dismissalProgress || abs(trackedVelocity.y) >= 3000.0)
+        return (calculateProgress() >= dismissalProgress || abs(trackedVelocity.y) >= velocityThreshold)
     }
 
     init(startFrame: CGRect, targetFrame: CGRect) {
         self.startFrame = startFrame
         self.targetFrame = targetFrame
         self.shouldCurrentFrame = startFrame
+
+        guard startFrame.width > 0 && startFrame.height > 0 else {
+            finalFrame = .zero
+            return
+        }
+
+        let scale = max(targetFrame.size.width / startFrame.size.width, targetFrame.size.height / startFrame.size.height)
+        let finalSize = CGSize(width: startFrame.size.width * scale, height: startFrame.size.height * scale)
+        let finalX = targetFrame.origin.x + (targetFrame.width - finalSize.width) / 2
+        let finalY = targetFrame.origin.y + (targetFrame.height - finalSize.height) / 2
+        finalFrame = CGRect(x: finalX, y: finalY, width: finalSize.width, height: finalSize.height)
     }
 
     func update(_ diffLocation: CGPoint, velocity: CGPoint, center: CGPoint) {
@@ -67,7 +83,7 @@ class ImageViewerPanTracker: NSObject {
             return 0.0
         }
         let verticalDistance = trackedLocation.y - startLocation.y
-        return abs(verticalDistance / (UIScreen.main.bounds.height / 2))
+        return abs(verticalDistance / panDistanceThreshold)
     }
 
     private func calculateNewCenter(_ diffLocation: CGPoint) -> CGPoint {
@@ -76,9 +92,8 @@ class ImageViewerPanTracker: NSObject {
 
     private func calculateNewSize(_ progress: CGFloat) -> CGSize {
         let startSize = startFrame.size
-        let targetSize = targetFrame.size
-        let diffSizeWidth = startSize.width - targetSize.width
-        let diffSizeHeight = startSize.height - targetSize.height
+        let diffSizeWidth = startSize.width - finalFrame.width
+        let diffSizeHeight = startSize.height - finalFrame.height
         let progressDiffWidth = diffSizeWidth * progress
         let progressDiffHeight = diffSizeHeight * progress
         return CGSize(width: startSize.width - progressDiffWidth, height: startSize.height - progressDiffHeight)

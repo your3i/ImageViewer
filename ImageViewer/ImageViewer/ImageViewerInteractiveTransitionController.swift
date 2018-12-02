@@ -20,7 +20,7 @@ class ImageViewerInteractiveTransitionController: NSObject {
 
     var panGestureRecognizer: UIPanGestureRecognizer?
 
-    private(set) var transitionDriver: ImageViewerTransitionDriver?
+    private var transitionDriver: ImageViewerTransitionDriver?
 }
 
 extension ImageViewerInteractiveTransitionController: UIViewControllerAnimatedTransitioning {

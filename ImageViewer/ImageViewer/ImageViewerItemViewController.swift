@@ -11,15 +11,11 @@ import UIKit
 
 class ImageViewerItemViewController: UIViewController {
 
-    private let imageZoomingView = ImageViewerScrollView()
+    let imageZoomingView = ImageViewerScrollView()
 
     private var item: ImageViewerItem!
 
     private var originalLoaded = false
-
-    var imageView: UIImageView {
-        return imageZoomingView.imageView
-    }
 
     static func viewController(_ item: ImageViewerItem) -> ImageViewerItemViewController {
         let viewController = ImageViewerItemViewController()
@@ -31,6 +27,7 @@ class ImageViewerItemViewController: UIViewController {
     override func loadView() {
         super.loadView()
         imageZoomingView.frame = view.bounds
+        imageZoomingView.imageView.kf.indicatorType = .activity
         view.addSubview(imageZoomingView)
 
         imageZoomingView.translatesAutoresizingMaskIntoConstraints = false
@@ -54,24 +51,31 @@ class ImageViewerItemViewController: UIViewController {
         super.viewWillTransition(to: size, with: coordinator)
         coordinator.animate(alongsideTransition: { [weak self] _ in
             self?.imageZoomingView.relayout()
-        }, completion: nil)
+            }, completion: nil)
     }
 
     private func loadImage() {
-        imageZoomingView.imageView.kf.setImage(with: URL(string: item.url)) { [weak self] (image, error, _, _) in
-            guard let image = image else {
-                return
+        guard let url = URL(string: item.url) else {
+            return
+        }
+        imageZoomingView.imageView.kf.indicator?.startAnimatingView()
+        KingfisherManager.shared.retrieveImage(with: url, options: nil, progressBlock: nil) { [weak self] (image, _, _, _) in
+            self?.imageZoomingView.imageView.kf.indicator?.stopAnimatingView()
+            if let image = image {
+                self?.imageZoomingView.image = image
             }
-            self?.imageZoomingView.image = image
         }
     }
 
     private func loadOriginalIfNeeded() {
-        guard !originalLoaded, let url = item.original else {
+        guard !originalLoaded, let original = item.original, let url = URL(string: original) else {
             return
         }
-        imageZoomingView.imageView.kf.indicatorType = .activity
-        imageZoomingView.imageView.kf.setImage(with: URL(string: url)) { [weak self] (image, error, _, _) in
+
+        imageZoomingView.imageView.kf.indicator?.startAnimatingView()
+        KingfisherManager.shared.retrieveImage(with: url, options: nil, progressBlock: nil) { [weak self] (image, _, _, _) in
+            self?.imageZoomingView.imageView.kf.indicator?.stopAnimatingView()
+
             guard let image = image else {
                 return
             }

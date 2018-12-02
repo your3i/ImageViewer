@@ -8,25 +8,32 @@
 
 import UIKit
 
-protocol ImageViewerControllerDataSource: class {
+public protocol ImageViewerControllerDataSource: class {
 
     func numberOfItems(in imageViewerController: ImageViewerController) -> Int
 
     func imageViewerController(_ imageViewerController: ImageViewerController, itemAt index: Int) -> ImageViewerItem
 }
 
-protocol ImageViewerDelegate: class {
+public protocol ImageViewerDelegate: class {
 
-    func imageViewerController(_ imageViewerController: ImageViewerController, transitionViewForItemAt index: Int) -> UIView
+    func imageViewerController(_ imageViewerController: ImageViewerController, transitionViewForItemAt index: Int) -> UIView?
+
+    func imageViewerController(_ imageViewerController: ImageViewerController, didShowItemAt index: Int)
 }
 
-class ImageViewerController: UIViewController {
+extension ImageViewerDelegate {
 
-    weak var dataSource: ImageViewerControllerDataSource?
+    public func imageViewerController(_ imageViewerController: ImageViewerController, didShowItemAt index: Int) { }
+}
 
-    weak var delegate: ImageViewerDelegate?
+open class ImageViewerController: UIViewController {
 
-    var startIndex: Int = 0
+    open weak var dataSource: ImageViewerControllerDataSource?
+
+    open weak var delegate: ImageViewerDelegate?
+
+    open var startIndex: Int = 0
 
     private let pageViewController = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal, options: nil)
 
@@ -34,20 +41,31 @@ class ImageViewerController: UIViewController {
 
     private var lastPendingViewControllerIndex: Int?
 
-    private var currentPageIndex: Int?
+    public private(set) var currentPageIndex: Int? {
+        didSet {
+            if let index = currentPageIndex {
+                delegate?.imageViewerController(self, didShowItemAt: index)
+            }
+        }
+    }
 
     private var panGestureRecognizer: UIPanGestureRecognizer!
 
     private var interactiveTransitionController = ImageViewerInteractiveTransitionController()
 
-    static func viewController() -> ImageViewerController {
-        let viewController = ImageViewerController()
-        viewController.modalPresentationStyle = .custom
-        viewController.transitioningDelegate = viewController
-        return viewController
+    public init() {
+        super.init(nibName: nil, bundle: nil)
+        self.modalPresentationStyle = .custom
+        self.transitioningDelegate = self
     }
 
-    override func loadView() {
+    required public init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        self.modalPresentationStyle = .custom
+        self.transitioningDelegate = self
+    }
+
+    override open func loadView() {
         super.loadView()
         pageViewController.view.frame = view.bounds
         view.addSubview(pageViewController.view)
@@ -58,26 +76,28 @@ class ImageViewerController: UIViewController {
         pageViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
     }
 
-    override func viewDidLoad() {
+    override open func viewDidLoad() {
         super.viewDidLoad()
         pageViewController.dataSource = self
         pageViewController.delegate = self
+        addChild(pageViewController)
         reload()
 
         addTapGestureRecognizers()
         addDisimssPanGestureRecognizer()
     }
 
-    override func viewDidAppear(_ animated: Bool) {
+    override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         view.backgroundColor = .black
     }
 
-    func reload() {
+    open func reload() {
         itemViewControllers.removeAll()
 
         if let dataSource = dataSource {
             let count = dataSource.numberOfItems(in: self)
+            // swiftlint:disable:next identifier_name
             for i in 0..<count {
                 let item = dataSource.imageViewerController(self, itemAt: i)
                 let viewController = ImageViewerItemViewController.viewController(item)
@@ -92,7 +112,7 @@ class ImageViewerController: UIViewController {
             pageViewController.setViewControllers([firstViewController], direction: .forward, animated: false, completion: nil)
             currentPageIndex = 0
         } else {
-            pageViewController.setViewControllers([], direction: .forward, animated: false, completion: nil)
+            pageViewController.setViewControllers([UIViewController()], direction: .forward, animated: false, completion: nil)
         }
     }
 
@@ -139,7 +159,8 @@ class ImageViewerController: UIViewController {
 
 extension ImageViewerController: UIPageViewControllerDataSource, UIPageViewControllerDelegate {
 
-    func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
+    open func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
+        // swiftlint:disable:next force_cast
         guard let index = itemViewControllers.firstIndex(of: viewController as! ImageViewerItemViewController) else {
             return nil
         }
@@ -149,7 +170,8 @@ extension ImageViewerController: UIPageViewControllerDataSource, UIPageViewContr
         return itemViewControllers[index + 1]
     }
 
-    func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
+    open func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
+        // swiftlint:disable:next force_cast
         guard let index = itemViewControllers.firstIndex(of: viewController as! ImageViewerItemViewController) else {
             return nil
         }
@@ -161,22 +183,22 @@ extension ImageViewerController: UIPageViewControllerDataSource, UIPageViewContr
 
     // FIXME: UIPageViewController puts viewControllers above UIPageControl and it makes images' center change.
 
-//    func presentationCount(for pageViewController: UIPageViewController) -> Int {
-//        return itemViewControllers.count
-//    }
-//
-//    func presentationIndex(for pageViewController: UIPageViewController) -> Int {
-//        return startIndex
-//    }
+    //    func presentationCount(for pageViewController: UIPageViewController) -> Int {
+    //        return itemViewControllers.count
+    //    }
+    //
+    //    func presentationIndex(for pageViewController: UIPageViewController) -> Int {
+    //        return startIndex
+    //    }
 
-    func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
+    open func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
         guard let viewController = pendingViewControllers.first as? ImageViewerItemViewController  else {
             return
         }
         lastPendingViewControllerIndex = itemViewControllers.firstIndex(of: viewController)
     }
 
-    func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
+    open func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
         guard completed else {
             return
         }
@@ -186,7 +208,7 @@ extension ImageViewerController: UIPageViewControllerDataSource, UIPageViewContr
 
 extension ImageViewerController: UIViewControllerTransitioningDelegate {
 
-    func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    open func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         interactiveTransitionController.isPresenting = true
         if let sourceView = delegate?.imageViewerController(self, transitionViewForItemAt: startIndex) {
             interactiveTransitionController.sourceView = sourceView
@@ -194,17 +216,17 @@ extension ImageViewerController: UIViewControllerTransitioningDelegate {
         return interactiveTransitionController
     }
 
-    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    open func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         interactiveTransitionController.isPresenting = false
         if let currentPageIndex = currentPageIndex, let targetView = delegate?.imageViewerController(self, transitionViewForItemAt: currentPageIndex) {
             itemViewControllers[currentPageIndex].resetZoomScale()
-            interactiveTransitionController.sourceView = itemViewControllers[currentPageIndex].imageView
+            interactiveTransitionController.sourceView = itemViewControllers[currentPageIndex].imageZoomingView.imageView
             interactiveTransitionController.targetView = targetView
         }
         return interactiveTransitionController
     }
 
-    func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+    open func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
         if interactiveTransitionController.wantsInteractiveStart {
             return interactiveTransitionController
         } else {

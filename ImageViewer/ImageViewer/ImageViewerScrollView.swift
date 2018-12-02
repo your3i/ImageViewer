@@ -12,6 +12,7 @@ class ImageViewerScrollView: UIScrollView {
 
     var image: UIImage? {
         didSet {
+            imageView.image = image
             relayout()
         }
     }

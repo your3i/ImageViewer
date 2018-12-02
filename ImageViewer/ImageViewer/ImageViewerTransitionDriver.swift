@@ -34,14 +34,12 @@ class ImageViewerTransitionDriver: NSObject {
 
     private(set) var interactiveAnimator: UIViewPropertyAnimator!
 
-    private var startLocation: CGPoint?
-
-    private var currentLocation: CGPoint?
-
     private var tracker: ImageViewerPanTracker!
 
+    private var maskView: UIView?
+
     static func propertyAnimator(initialVelocity: CGVector = .zero) -> UIViewPropertyAnimator {
-        let timingParameters = UISpringTimingParameters(mass: 2.5, stiffness: 1400, damping: 95, initialVelocity: initialVelocity)
+        let timingParameters = UISpringTimingParameters(mass: 2.0, stiffness: 1100, damping: 95, initialVelocity: initialVelocity)
         // duration is not used when using UISpringTimingParameters, so set it to 0.0
         return UIViewPropertyAnimator(duration: 0.0, timingParameters: timingParameters)
     }
@@ -84,9 +82,7 @@ class ImageViewerTransitionDriver: NSObject {
                 let fromView = transitionContext.view(forKey: .from)!
                 let transitionView = sourceView ?? fromView
                 let snapshotFrame = transitionView.superview?.convert(transitionView.frame, to: fromView) ?? fromView.bounds
-                let view = fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: false, withCapInsets: .zero)
-                view?.frame = snapshotFrame
-                return view!
+                return fromView.resizableSnapshotView(from: snapshotFrame, afterScreenUpdates: false, withCapInsets: .zero)!
             }
         }()
         containerView.addSubview(transitionView)
@@ -133,17 +129,37 @@ class ImageViewerTransitionDriver: NSObject {
     }
 
     func startAnimation() {
-        dimmingView.alpha = isPresenting ? 0.0 : 1.0
         viewToTempHide?.isHidden = true
 
         let animator = ImageViewerTransitionDriver.propertyAnimator()
-        animator.addAnimations { [weak self] in
-            guard let strongSelf = self else {
-                return
+
+        if isPresenting {
+            dimmingView.alpha = 0.0
+
+            animator.addAnimations { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.dimmingView.alpha = 1.0
+                strongSelf.transitionView.frame = strongSelf.tracker.targetFrame
             }
-            strongSelf.dimmingView.alpha = strongSelf.isPresenting ? 1.0 : 0.0
-            strongSelf.transitionView.frame = strongSelf.tracker.targetFrame
+        } else {
+            dimmingView.alpha = 1.0
+            let view = UIView(frame: transitionView.bounds)
+            view.backgroundColor = .black
+            transitionView.mask = view
+            maskView = view
+
+            animator.addAnimations { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.dimmingView.alpha = 0.0
+                strongSelf.transitionView.frame = strongSelf.tracker.finalFrame
+                strongSelf.maskView?.frame = strongSelf.containerView.convert(strongSelf.tracker.targetFrame, to: strongSelf.transitionView)
+            }
         }
+
         animator.addCompletion { [weak self] position in
             self?.tearDown()
             let success = position == .end
@@ -228,11 +244,26 @@ extension ImageViewerTransitionDriver {
 
     func animate(_ toPosition: UIViewAnimatingPosition) {
         let animator = ImageViewerTransitionDriver.propertyAnimator()
-        animator.addAnimations { [weak self] in
-            guard let strongSelf = self else {
-                return
+
+        if toPosition == .start {
+            animator.addAnimations { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.transitionView.frame = strongSelf.tracker.startFrame
             }
-            strongSelf.transitionView.frame = (toPosition == .start ? strongSelf.tracker.startFrame : strongSelf.tracker.targetFrame)
+        } else {
+            let view = UIView(frame: transitionView.bounds)
+            view.backgroundColor = .black
+            transitionView.mask = view
+            maskView = view
+            animator.addAnimations { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.transitionView.frame = strongSelf.tracker.finalFrame
+                strongSelf.maskView?.frame = strongSelf.containerView.convert(strongSelf.tracker.targetFrame, to: strongSelf.transitionView)
+            }
         }
 
         animator.startAnimation()

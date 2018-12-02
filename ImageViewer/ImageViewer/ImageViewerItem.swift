@@ -8,7 +8,12 @@
 
 import Foundation
 
-struct ImageViewerItem {
+public struct ImageViewerItem {
     var url: String
     var original: String?
+
+    public init(url: String, original: String?) {
+        self.url = url
+        self.original = original
+    }
 }

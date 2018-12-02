@@ -30,7 +30,7 @@ class ViewController: UIViewController {
     }
 
     @IBAction func handleImage1Tapped(_ sender: Any) {
-        let viewController = ImageViewerController.viewController()
+        let viewController = ImageViewerController()
         viewController.dataSource = self
         viewController.delegate = self
         viewController.startIndex = 0
@@ -38,7 +38,7 @@ class ViewController: UIViewController {
     }
     
     @IBAction func handleImage2Tapped(_ sender: Any) {
-        let viewController = ImageViewerController.viewController()
+        let viewController = ImageViewerController()
         viewController.dataSource = self
         viewController.delegate = self
         viewController.startIndex = 1
@@ -46,7 +46,7 @@ class ViewController: UIViewController {
     }
     
     @IBAction func handleImage3Tapped(_ sender: Any) {
-        let viewController = ImageViewerController.viewController()
+        let viewController = ImageViewerController()
         viewController.dataSource = self
         viewController.delegate = self
         viewController.startIndex = 2
@@ -66,8 +66,7 @@ extension ViewController: ImageViewerControllerDataSource {
 }
 
 extension ViewController: ImageViewerDelegate {
-
-    func imageViewerController(_ imageViewerController: ImageViewerController, transitionViewForItemAt index: Int) -> UIView {
+    func imageViewerController(_ imageViewerController: ImageViewerController, transitionViewForItemAt index: Int) -> UIView? {
         let views: [UIImageView] = [imageView1, imageView2, imageView3]
         guard 0..<views.count ~= index else {
             return view
